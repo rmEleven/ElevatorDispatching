@@ -5,6 +5,7 @@ __pycache__/
 *.cfg
 share/*
 Scripts/*
+example/*
 
 # C extensions
 *.so
