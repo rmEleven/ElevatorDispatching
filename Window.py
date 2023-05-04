@@ -20,7 +20,7 @@ class MainWindow(QWidget):
         for i in range(1, 6):
             self.Eles.append(Elevator(i, self))
 
-        self.setUI()        # 设置界面布局
+        self.setUI()         # 设置界面布局
 
         for i in range(5):   # 启动5个电梯进程
             self.Eles[i].start()
