@@ -2,9 +2,8 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-import sys
 import time
-from functools import partial
+
 
 class Elevator(QThread):
     '''创建一个名为Elevator的类模拟电梯，继承QThread类'''
@@ -99,18 +98,22 @@ class Elevator(QThread):
             elif min(list(self.target)) < self.floor:  # 最小目标楼层小于当前楼层
                 self.state = -1  # 电梯向上移动
         
-    def error(self):
+    def change_error(self):
         '''改变电梯故障状态'''
-        if self.error == 0:  # 电梯没有故障
-            self.error = 1   # 设置为出现故障
-            self.mainWindow.findChild(QPushButton, "error{0}".format(self.id)).setText("出现故障")  # 设置按钮文本
-        else:                # 电梯出现故障
-            self.error = 0   # 设置为没有故障
-            self.mainWindow.findChild(QPushButton, "error{0}".format(self.id)).setText("正常运行")  # 设置按钮文本
+        if self.error == 0:      # 电梯没有故障
+            self.error = 1       # 设置为出现故障
+            self.mainWindow.findChild(QPushButton, "error{0}".format(self.id)).setText("malfunction")  # 设置按钮文本
+            self.target.clear()  # 清空目标楼层集合
+            self.state = 0       # 设置电梯为静止状态
+            for btnID in range(1, 21):
+                self.mainWindow.findChild(QPushButton, "{0}+{1}".format(self.id, btnID)).setStyleSheet("QPushButton{}")  # 去掉电梯内部按钮标识
+        else:                    # 电梯出现故障
+            self.error = 0       # 设置为没有故障
+            self.mainWindow.findChild(QPushButton, "error{0}".format(self.id)).setText("function")     # 设置按钮文本
 
     def add_target(self, floor):
         '''将楼层添加到电梯的目标楼层集合中'''
-        # 找到对应的按钮，并设置样式为背景图片为background.png
-        self.mainWindow.findChild(QPushButton, "{0}+{1}".format(self.id, floor)).setStyleSheet("QPushButton{background-image: url(background.png)}")
+        # 找到对应的按钮
+        self.mainWindow.findChild(QPushButton, "{0}+{1}".format(self.id, floor)).setStyleSheet("QPushButton{background-image: url(selected.png)}")
         # 将目标楼层添加到对应电梯的目标楼层集合中
         self.target.add(floor)
