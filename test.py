@@ -1,119 +1,95 @@
+from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+
 import sys
 import time
 from functools import partial
 
-from PyQt5.QtCore import QThread, pyqtSignal  # 导入PyQt信号类和QThread类
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
 
 class Elevator(QThread):
     '''
     创建一个名为Elevator的类，继承QThread类
     '''
+
     trigger = pyqtSignal(int)  # 实例化一个信号对象，传递int类型的参数
 
     def __init__(self, id, mainWindow):
-        '''类的构造函数，接收int类型的参数'''
-        super(Elevator, self).__init__()  # 调用父类QThread的构造函数
-        self.mainWindow = mainWindow
+        '''构造函数'''
+        super().__init__()                # 调用父类QThread的构造函数
+        self.trigger.connect(self.check)  # 将信号trigger连接到check函数
 
-        self.id = id                     # 保存参数id
-        self.trigger.connect(self.check)       # 将信号trigger连接到check函数
-        self.should_sleep = 0
-        self.should_sleep2 = 0
-        self.pause = 1  # 电梯是否暂停运行
-        self.state = 0  # 电梯状态 0表示停止 1表示向上运行 -1表示向下运行
-        self.floor = 1  # 电梯当前所在楼层
-        self.target = set([])  # 目标楼层
+        self.id = id                  # 电梯编号id
+        self.mainWindow = mainWindow  # 电梯图形化界面
+
+        self.arrive = 0         # 电梯是否到达目标楼层
+        self.pause = 0          # 电梯是否暂停运行
+        self.state = 0          # 电梯状态 0:停止 1:向上运行 -1:向下运行
+        self.floor = 1          # 电梯当前所在楼层
+        self.target = set([])   # 电梯的目标楼层集合
 
     def run(self):
         '''重写QThread的run方法'''
         while (1):
-            # 如果should_sleep列表的self.int-1项为1，则执行以下代码
-            if self.should_sleep == 1:
-                # 设置id为"open{0}".format(self.int)的QPushButton按钮的样式为指定的背景图片
-                self.mainWindow.findChild(QPushButton, "open{0}".format(self.int)).setStyleSheet(
-                    "QPushButton{background-image: url(open.png)}")
-                time.sleep(2)  # 线程休眠2秒
-                # 将id为"open{0}".format(self.int)的QPushButton按钮的样式设置为空
-                self.mainWindow.findChild(QPushButton, "open{0}".format(self.int)).setStyleSheet(
-                    "QPushButton{}")
-                self.should_sleep = 0  # 将should_sleep列表的self.int-1项设置为0
-
-            # 如果should_sleep列表的self.int-1+5项为1，则执行以下代码
-            if self.should_sleep2 == 1:
-                # 设置id为"open{0}".format(self.int)的QPushButton按钮的样式为指定的背景图片
-                self.mainWindow.findChild(QPushButton, "open{0}".format(self.int)).setStyleSheet(
-                    "QPushButton{background-image: url(open.png)}")
-                time.sleep(2)  # 线程休眠2秒
-                # 将id为"open{0}".format(self.int)的QPushButton按钮的样式设置为空
-                self.mainWindow.findChild(QPushButton, "open{0}".format(self.int)).setStyleSheet(
-                    "QPushButton{}")
-                self.should_sleep2 = 0  # 将should_sleep列表的self.int-1+5项设置为0
+            if self.arrive == 1:  # 电梯到达目标楼层
+                # 设置按钮的样式为开门图片
+                self.mainWindow.findChild(QPushButton, "open{0}".format(self.id)).setStyleSheet("QPushButton{background-image: url(open.png)}")
+                time.sleep(3)  # 线程休眠3秒
+                # 将按钮的样式设置为空
+                self.mainWindow.findChild(QPushButton, "open{0}".format(self.id)).setStyleSheet("QPushButton{}")
+                self.arrive = 0  # 将arrive设置为0
             
             self.trigger.emit(self.id)  # 发射信号trigger，并传递参数self.id
-            time.sleep(1)  # 线程休眠1秒
+            time.sleep(1)               # 线程休眠1秒
     
     def check(self):
-        if self.pause == 1:  # 如果电梯当前处于暂停状态
-            # 改变电梯楼层
-            if self.state == 0:  # 如果电梯当前处于静止状态
-                pass
-            elif self.state == 1:  # 如果电梯当前处于向上状态
-                self.floor = self.floor + 1  # 电梯当前楼层向上移动一层
-            else:  # 如果电梯当前处于向下状态
-                self.floor = self.floor - 1  # 电梯当前楼层向下移动一层
-        
-            self.mainWindow.findChild(QLCDNumber, "{0}".format(id)).display(self.floor)  # 显示电梯楼层
-            self.mainWindow.findChild(QPushButton, "{0}+{1}".format(id, self.floor)).setStyleSheet("QPushButton{}")  # 去掉该层的标识
+        if self.pause == 0:  # 电梯没有暂停运行
+            
+            '''改变电梯楼层'''
+            if self.state == 1:              # 电梯处于向上状态
+                self.floor = self.floor + 1  # 向上移动一层
+            elif self.state == -1:           # 电梯处于向下状态
+                self.floor = self.floor - 1  # 向下移动一层
+            self.mainWindow.findChild(QLCDNumber, "{0}".format(self.id)).display(self.floor)  # 显示电梯楼层
+            
+            '''电梯处于向上状态'''
+            if self.state == 1:
+                self.mainWindow.findChild(QPushButton, "{0}+{1}".format(self.id, self.floor)).setStyleSheet("QPushButton{}")  # 去掉电梯内部该层的标识
+                self.mainWindow.findChild(QPushButton, "up{0}".format(self.floor)).setStyleSheet("QPushButton{}")             # 去掉电梯外部该层的标识
+                if (self.floor in self.target) or (self.floor in self.mainWindow.up):  # 到达目标楼层
+                    self.arrive = 1
+                self.target.discard(self.floor)         # 从目标楼层集合中移除该层
+                self.mainWindow.up.discard(self.floor)  # 从楼层等待集合中移除该层
 
-            # 从外部等候楼层中移除该层
-            if self.state == 1:  # 如果电梯当前处于向上状态
-                self.mainWindow.findChild(QPushButton, "up{0}".format(self.floor)).setStyleSheet("QPushButton{}")  # 移除标识
-            if self.state == -1:  # 如果电梯当前处于向下状态
-                self.mainWindow.findChild(QPushButton, "down{0}".format(self.floor)).setStyleSheet("QPushButton{}")  # 移除标识
-
-            if self.state == 1:  # 如果电梯当前处于向上状态
-                if (self.floor in self.target) or (self.floor in people_up):
-                    self.should_sleep = 1  # 该电梯需要继续执行
-            if self.state == -1:  # 如果电梯当前处于向下状态
-                if (self.floor in self.target) or (self.floor in people_down):
-                    self.should_sleep2 = 1  # 该电梯需要继续执行
-
-            if self.state == 1:  # 如果电梯当前处于向上状态
-                people_up.discard(self.floor)  # 从楼层等待列表中移除该层
-            if self.state == -1:  # 如果电梯当前处于向下状态
-                people_down.discard(self.floor)  # 从楼层等待列表中移除该层
-            self.target.discard(self.floor)  # 从要达到的目标楼层中移除该层
-
-            # ----------------------状态改变的算法---------------------- #
-            if self.state == 1:  # 如果当前状态是向上
-                # 如果当前电梯要到达的目标楼层列表为空，说明电梯已经没有任务，状态置为0，表示电梯静止等待。
-                if len(list(self.target)) == 0:
-                    self.state = 0
+                if len(list(self.target)) == 0:  # 电梯要到达的目标楼层集合为空
+                    self.state = 0               # 电梯已经没有任务，状态置为0，表示电梯静止等待。
                 # 如果电梯要到达的目标楼层列表不为空，且列表中最大的目标楼层小于当前楼层，说明电梯应该向下运动，状态置为-1，表示电梯正在向上运动。
                 if (len(list(self.target)) != 0) and (max(list(self.target)) < self.floor):
                     self.state = -1
-            
-            if self.state == -1:  # 如果当前状态是向下
-                # 如果当前电梯要到达的目标楼层列表为空，说明电梯已经没有任务，状态置为0，表示电梯静止等待。
-                if len(list(self.target)) == 0:
-                    self.state = 0
+
+            '''电梯处于向下状态'''
+            if self.state == -1:
+                self.mainWindow.findChild(QPushButton, "{0}+{1}".format(self.id, self.floor)).setStyleSheet("QPushButton{}")  # 去掉电梯内部该层的标识
+                self.mainWindow.findChild(QPushButton, "down{0}".format(self.floor)).setStyleSheet("QPushButton{}")           # 去掉电梯外部该层的标识
+                if (self.floor in self.target) or (self.floor in self.mainWindow.down):  # 到达目标楼层
+                    self.arrive = 1
+                self.target.discard(self.floor)           # 从目标楼层集合中移除该层
+                self.mainWindow.down.discard(self.floor)  # 从楼层等待集合中移除该层
+
+                if len(list(self.target)) == 0:  # 电梯要到达的目标楼层集合为空
+                    self.state = 0               # 电梯已经没有任务，状态置为0，表示电梯静止等待。
                 # 如果电梯要到达的目标楼层列表不为空，且列表中最小的目标楼层大于当前楼层，说明电梯应该向上运动，状态置为1，表示电梯正在向上运动。
                 if (len(list(self.target)) != 0) and (min(list(self.target)) > self.floor):
                     self.state = 1
-            
-            if self.state == 0:  # 如果当前状态是静止
+
+            '''电梯处于静止状态'''            
+            if self.state == 0:
                 # 如果电梯内有要到达的楼层并且电梯内的目标楼层最大值大于当前电梯所在的楼层
                 if (len(list(self.target)) != 0) and (max(list(self.target)) > self.floor):
                     self.state = 1  # 向上运动
                 # 如果电梯内有要到达的楼层并且电梯内的目标楼层最小值小于当前电梯所在的楼层
                 if (len(list(self.target)) != 0) and (min(list(self.target)) < self.floor):
                     self.state = -1  # 向下运动
-            
-            # -----------------------显示电梯楼层----------------------- #
-            self.mainWindow.findChild(QLCDNumber, "{0}".format(id)).display(self.floor)
-            # ------------------------间隔的时间------------------------ #
         
     def pause(self):
         if self.pause == 0:  # 如果该电梯未被暂停
@@ -123,35 +99,37 @@ class Elevator(QThread):
             self.pause = 0  # 将该电梯的暂停状态设为未暂停
             self.mainWindow.findChild(QPushButton, "pause{0}".format(self.id)).setText("启动")  # 将该电梯对应的暂停按钮文本设置为“启动”
 
-    def set_goal(self, flr):  # 设定目标楼层
-        '''将目标楼层添加到对应电梯的目标楼层集合中'''
+    def add_target(self, floor):
+        '''将楼层添加到电梯的目标楼层集合中'''
         # 找到对应的按钮，并设置样式为背景图片为background.png
-        self.mainWindow.findChild(QPushButton, "{0}+{1}".format(self.id, flr)).setStyleSheet("QPushButton{background-image: url(background.png)}")
-        self.target.add(flr)  # 将目标楼层添加到对应电梯的目标楼层集合中
+        self.mainWindow.findChild(QPushButton, "{0}+{1}".format(self.id, floor)).setStyleSheet("QPushButton{background-image: url(background.png)}")
+        # 将目标楼层添加到对应电梯的目标楼层集合中
+        self.target.add(floor)
 
 
-class MainWindow(QWidget):  # 主窗口
+class MainWindow(QWidget):
+    '''
+    主窗口
+    '''
 
     def __init__(self):
-        super(MainWindow, self).__init__()
+        '''构造函数'''
+        super().__init__()   # 调用父类QWidget的构造函数
 
-        # 五个线程对应五部电梯，每隔一定时间检查每部电梯的状态和elevator_goal数组，并作出相应的行动
-        self.Eles = []
+        self.up = set([])    # 楼层的向上请求
+        self.down = set([])  # 楼层的向下请求
+        
+        self.Eles = []       # 创建5个电梯线程
         for i in range(1, 6):
             self.Eles.append(Elevator(i, self))
-        
-        for i in range(5):
+
+        self.initUI()        # 设置界面布局
+
+        for i in range(5):   # 启动5个电梯进程
             self.Eles[i].start()
         
-        self.initUI()
-
     def initUI(self):
-        # 设置背景图片
-        # palette = QPalette()
-        # palette.setBrush(QPalette.Background, QBrush(QPixmap("beijing.png")))
-        # self.setPalette(palette)
-
-        wlayout = QHBoxLayout()  # 总体布局：横向，其中嵌套了两个网格布局，emmmm 目前总体感觉还行，不想花时间美化了，先写业务逻辑
+        wlayout = QHBoxLayout()  # 总体布局：横向，其中嵌套了两个网格布局
         gridoutright = QGridLayout()
         grid = QGridLayout()
         grid.setSpacing(0)
@@ -177,7 +155,7 @@ class MainWindow(QWidget):  # 主窗口
                 self.button = QPushButton(name)
                 self.button.setFont(QFont("Microsoft YaHei", 12))
                 self.button.setObjectName("{0}+{1}".format(inti + 1, intj))
-                self.button.clicked.connect(partial(self.Eles[inti].set_goal, intj))
+                self.button.clicked.connect(partial(self.Eles[inti].add_target, intj))
                 intj = intj + 1
                 self.button.setMaximumHeight(60)  # 按钮最大高度
                 grid.addWidget(self.button, position[0] + 2, position[1] + inti * 3)
@@ -198,7 +176,9 @@ class MainWindow(QWidget):  # 主窗口
             self.button.setFont(QFont("Microsoft YaHei", 12))
             self.button.setObjectName("pause{0}".format(i + 1))
             self.button.setMinimumHeight(40)
-            self.button.clicked.connect(lambda: self.Eles[i].pause())
+            '''error'''
+            self.button.clicked.connect(lambda: self.Eles[int(i)].pause())
+            #self.button.clicked.connect(lambda: self.Eles[i].pause())  
             #self.button.clicked.connect(partial(self.Eles[i].pause))
             grid.addWidget(self.button, 12, 3 * i, 1, 2)
 
@@ -216,7 +196,7 @@ class MainWindow(QWidget):  # 主窗口
             self.button.setFont(QFont("Microsoft YaHei"))
             self.button.setObjectName("up{0}".format(fori + 1))
             self.button.setMinimumHeight(42)
-            self.button.clicked.connect(partial(self.set_global_goal_up, fori + 1))
+            self.button.clicked.connect(partial(self.set_up, fori + 1))
             gridoutright.addWidget(self.button, 20 - fori, 0)
             fori = fori + 1
 
@@ -226,47 +206,41 @@ class MainWindow(QWidget):  # 主窗口
             self.button.setFont(QFont("Microsoft YaHei"))
             self.button.setObjectName("down{0}".format(fori + 1))
             self.button.setMinimumHeight(42)
-            self.button.clicked.connect(partial(self.set_global_goal_down, fori + 1))
+            self.button.clicked.connect(partial(self.set_down, fori + 1))
             gridoutright.addWidget(self.button, 20 - fori, 1)
             fori = fori + 1
 
         # ----------------------------------------------------------------------------------------#
         self.move(10, 10)
-        self.setWindowTitle('Elevator-Dispatching Copyright@2020 沈天宇')
+        self.setWindowTitle('2051475 王浩')
         self.show()
 
 
-    def set_global_goal_up(self, flr):  # 设定楼道里上楼请求所在的楼层
-        '''将楼道里的上楼请求添加到对应的电梯的目标楼层中'''
-        # 找到对应的按钮，并将其背景设置为"background.png"
-        myWindow.findChild(QPushButton, "up{0}".format(flr)).setStyleSheet("QPushButton{background-image: url(background.png)}")
-        people_up.add(flr)  # 将当前请求楼层添加到people_up集合中
+    def set_up(self, floor):
+        '''将楼层里的上楼请求添加到集合里'''
+        # 找到对应的按钮，把背景设置为"background.png"
+        myWindow.findChild(QPushButton, "up{0}".format(floor)).setStyleSheet("QPushButton{background-image: url(background.png)}")
+        self.up.add(floor)  # 将当前请求楼层添加到up集合中
         # 计算电梯到每个楼层的距离，将请求楼层添加到距离最近的电梯的目标楼层中
         self.Eles[
-            [abs(self.Eles[0].floor - flr), abs(self.Eles[1].floor - flr), abs(self.Eles[2].floor - flr), abs(self.Eles[3].floor - flr), abs(self.Eles[4].floor - flr)].index(
-                min(abs(self.Eles[0].floor - flr), abs(self.Eles[1].floor - flr), abs(self.Eles[2].floor - flr), abs(self.Eles[3].floor - flr), abs(self.Eles[4].floor - flr)))].add(flr)
+            [abs(self.Eles[0].floor - floor), abs(self.Eles[1].floor - floor), abs(self.Eles[2].floor - floor), abs(self.Eles[3].floor - floor), abs(self.Eles[4].floor - floor)].index(
+                min(abs(self.Eles[0].floor - floor), abs(self.Eles[1].floor - floor), abs(self.Eles[2].floor - floor), abs(self.Eles[3].floor - floor), abs(self.Eles[4].floor - floor)))].target.add(floor)
 
 
-    def set_global_goal_down(self, flr):  # 设定楼道里下楼请求所在的楼层
-        '''将楼道里的下楼请求添加到对应的电梯的目标楼层中'''
-        # 找到对应的按钮，并将其背景设置为"background.png"
-        myWindow.findChild(QPushButton, "down{0}".format(flr)).setStyleSheet("QPushButton{background-image: url(background.png)}")
-        people_down.add(flr)    # 将当前请求楼层添加到people_down集合中
+    def set_down(self, floor):
+        '''将楼层里的下楼请求添加到集合里'''
+        # 找到对应的按钮，把背景设置为"background.png"
+        myWindow.findChild(QPushButton, "down{0}".format(floor)).setStyleSheet("QPushButton{background-image: url(background.png)}")
+        self.down.add(floor)    # 将当前请求楼层添加到down集合中
         # 计算电梯到每个楼层的距离，将请求楼层添加到距离最近的电梯的目标楼层中
         self.Eles[
-            [abs(self.Eles[0].floor - flr), abs(self.Eles[1].floor - flr), abs(self.Eles[2].floor - flr), abs(self.Eles[3].floor - flr), abs(self.Eles[4].floor - flr)].index(
-                min(abs(self.Eles[0].floor - flr), abs(self.Eles[1].floor - flr), abs(self.Eles[2].floor - flr), abs(self.Eles[3].floor - flr), abs(self.Eles[4].floor - flr)))].add(flr)
+            [abs(self.Eles[0].floor - floor), abs(self.Eles[1].floor - floor), abs(self.Eles[2].floor - floor), abs(self.Eles[3].floor - floor), abs(self.Eles[4].floor - floor)].index(
+                min(abs(self.Eles[0].floor - floor), abs(self.Eles[1].floor - floor), abs(self.Eles[2].floor - floor), abs(self.Eles[3].floor - floor), abs(self.Eles[4].floor - floor)))].target.add(floor)
 
 
 if __name__ == '__main__':
 
-    app = QApplication(sys.argv)
-    myWindow = MainWindow()
+    app = QApplication(sys.argv)  # 创建一个 QApplication 对象
+    myWindow = MainWindow()       # 创建一个 MainWindow 对象
 
-    # 表示楼道里的向上的请求
-    people_up = set([])
-
-    # 表示楼道里的向下的请求
-    people_down = set([])
-
-    sys.exit(app.exec_())  # 应用程序主循环
+    sys.exit(app.exec_())         # 开始应用程序的主循环
