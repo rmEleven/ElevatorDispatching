@@ -28,8 +28,8 @@ class MainWindow(QWidget):
     def setUI(self):
         '''界面设置函数'''
         wholeLayout = QHBoxLayout()  # 创建横向的总体布局
-        gridLeft = QGridLayout()     # 创建左侧网格布局：电梯视图
-        gridRight = QGridLayout()    # 创建右侧网格布局：楼层视图
+        gridLeft = QGridLayout()     # 创建左侧网格布局：楼层视图
+        gridRight = QGridLayout()    # 创建右侧网格布局：电梯视图
         gridLeft.setSpacing(0)       # 设置间隔为0
         gridRight.setSpacing(0)      # 设置间隔为0
 
